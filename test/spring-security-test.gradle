@@ -11,12 +11,14 @@ dependencies {
 	optional project(':spring-security-oauth2-jose')
 	optional project(':spring-security-oauth2-resource-server')
 	optional 'io.projectreactor:reactor-core'
+	optional 'org.springframework:spring-webmvc'
 	optional 'org.springframework:spring-webflux'
 
 	provided 'javax.servlet:javax.servlet-api'
 
 	testCompile project(path : ':spring-security-config', configuration : 'tests')
 	testCompile 'com.fasterxml.jackson.core:jackson-databind'
+	testCompile 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 	testCompile 'io.projectreactor:reactor-test'
 	testCompile 'javax.xml.bind:jaxb-api'
 	testCompile 'org.skyscreamer:jsonassert'

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package sample;
 
 import org.junit.Test;
@@ -21,11 +22,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizedClientRepository;
-import org.springframework.security.oauth2.client.web.server.WebSessionServerOAuth2AuthorizedClientRepository;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -46,18 +43,10 @@ public class OAuth2LoginApplicationTests {
 	@Autowired
 	ReactiveClientRegistrationRepository clientRegistrationRepository;
 
-	@TestConfiguration
-	static class AuthorizedClient {
-		@Bean
-		ServerOAuth2AuthorizedClientRepository authorizedClientRepository() {
-			return new WebSessionServerOAuth2AuthorizedClientRepository();
-		}
-	}
-
 	@Test
 	public void requestWhenMockOidcLoginThenIndex() {
 		this.clientRegistrationRepository.findByRegistrationId("github")
-				.map(clientRegistration ->
+				.map((clientRegistration) -> 
 						this.test.mutateWith(mockOAuth2Login().clientRegistration(clientRegistration))
 							.get().uri("/")
 							.exchange()

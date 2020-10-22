@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package sample;
 
 import org.junit.Test;
@@ -22,11 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -42,7 +40,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 public class OAuth2ResourceServerApplicationITests {
 
 	String tenantOneNoScopesToken = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzdWJqZWN0IiwiZXhwIjo0NjgzODA1MTI4fQ.ULEPdHG-MK5GlrTQMhgqcyug2brTIZaJIrahUeq9zaiwUSdW83fJ7W1IDd2Z3n4a25JY2uhEcoV95lMfccHR6y_2DLrNvfta22SumY9PEDF2pido54LXG6edIGgarnUbJdR4rpRe_5oRGVa8gDx8FnuZsNv6StSZHAzw5OsuevSTJ1UbJm4UfX3wiahFOQ2OI6G-r5TB2rQNdiPHuNyzG5yznUqRIZ7-GCoMqHMaC-1epKxiX8gYXRROuUYTtcMNa86wh7OVDmvwVmFioRcR58UWBRoO1XQexTtOQq_t8KYsrPZhb9gkyW8x2bAQF-d0J0EJY8JslaH6n4RBaZISww";
@@ -57,36 +54,31 @@ public class OAuth2ResourceServerApplicationITests {
 	public void tenantOnePerformWhenValidBearerTokenThenAllows()
 		throws Exception {
 
-		this.mvc.perform(get("/tenantOne").with(bearerToken(this.tenantOneNoScopesToken)))
+		this.mvc.perform(get("/")
+				.header("tenant", "one")
+				.header("Authorization", "Bearer " + this.tenantOneNoScopesToken))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("Hello, subject for tenantOne!")));
+				.andExpect(content().string(containsString("Hello, subject for tenant one!")));
 	}
-
-	@Test
-	public void tenantOnePerformWhenValidBearerTokenWithServletPathThenAllows()
-		throws Exception {
-
-		this.mvc.perform(get("/tenantOne").servletPath("/tenantOne").with(bearerToken(this.tenantOneNoScopesToken)))
-				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("Hello, subject for tenantOne!")));
-	}
-
-	// -- tests with scopes
 
 	@Test
 	public void tenantOnePerformWhenValidBearerTokenThenScopedRequestsAlsoWork()
 			throws Exception {
 
-		this.mvc.perform(get("/tenantOne/message").with(bearerToken(this.tenantOneMessageReadToken)))
+		this.mvc.perform(get("/message")
+				.header("tenant", "one")
+				.header("Authorization", "Bearer " + this.tenantOneMessageReadToken))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("secret message for tenantOne")));
+				.andExpect(content().string(containsString("secret message for tenant one")));
 	}
 
 	@Test
 	public void tenantOnePerformWhenInsufficientlyScopedBearerTokenThenDeniesScopedMethodAccess()
 			throws Exception {
 
-		this.mvc.perform(get("/tenantOne/message").with(bearerToken(this.tenantOneNoScopesToken)))
+		this.mvc.perform(get("/message")
+				.header("tenant", "one")
+				.header("Authorization", "Bearer " + this.tenantOneNoScopesToken))
 				.andExpect(status().isForbidden())
 				.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
 						containsString("Bearer error=\"insufficient_scope\"")));
@@ -96,27 +88,31 @@ public class OAuth2ResourceServerApplicationITests {
 	public void tenantTwoPerformWhenValidBearerTokenThenAllows()
 			throws Exception {
 
-		this.mvc.perform(get("/tenantTwo").with(bearerToken(this.tenantTwoNoScopesToken)))
+		this.mvc.perform(get("/")
+				.header("tenant", "two")
+				.header("Authorization", "Bearer " + this.tenantTwoNoScopesToken))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("Hello, subject for tenantTwo!")));
+				.andExpect(content().string(containsString("Hello, subject for tenant two!")));
 	}
-
-	// -- tests with scopes
 
 	@Test
 	public void tenantTwoPerformWhenValidBearerTokenThenScopedRequestsAlsoWork()
 			throws Exception {
 
-		this.mvc.perform(get("/tenantTwo/message").with(bearerToken(this.tenantTwoMessageReadToken)))
+		this.mvc.perform(get("/message")
+				.header("tenant", "two")
+				.header("Authorization", "Bearer " + this.tenantTwoMessageReadToken))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("secret message for tenantTwo")));
+				.andExpect(content().string(containsString("secret message for tenant two")));
 	}
 
 	@Test
 	public void tenantTwoPerformWhenInsufficientlyScopedBearerTokenThenDeniesScopedMethodAccess()
 			throws Exception {
 
-		this.mvc.perform(get("/tenantTwo/message").with(bearerToken(this.tenantTwoNoScopesToken)))
+		this.mvc.perform(get("/message")
+				.header("tenant", "two")
+				.header("Authorization", "Bearer " + this.tenantTwoNoScopesToken))
 				.andExpect(status().isForbidden())
 				.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
 						containsString("Bearer error=\"insufficient_scope\"")));
@@ -126,24 +122,8 @@ public class OAuth2ResourceServerApplicationITests {
 	public void invalidTenantPerformWhenValidBearerTokenThenThrowsException()
 			throws Exception {
 
-		this.mvc.perform(get("/tenantThree").with(bearerToken(this.tenantOneNoScopesToken)));
-	}
-
-	private static class BearerTokenRequestPostProcessor implements RequestPostProcessor {
-		private String token;
-
-		BearerTokenRequestPostProcessor(String token) {
-			this.token = token;
-		}
-
-		@Override
-		public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
-			request.addHeader("Authorization", "Bearer " + this.token);
-			return request;
-		}
-	}
-
-	private static BearerTokenRequestPostProcessor bearerToken(String token) {
-		return new BearerTokenRequestPostProcessor(token);
+		this.mvc.perform(get("/")
+				.header("tenant", "three")
+				.header("Authorization", "Bearer " + this.tenantOneNoScopesToken));
 	}
 }

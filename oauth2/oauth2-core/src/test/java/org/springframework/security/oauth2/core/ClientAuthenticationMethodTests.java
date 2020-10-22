@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.security.oauth2.core;
 
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
  * Tests for {@link ClientAuthenticationMethod}.
@@ -26,9 +28,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class ClientAuthenticationMethodTests {
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void constructorWhenValueIsNullThenThrowIllegalArgumentException() {
-		new ClientAuthenticationMethod(null);
+		assertThatIllegalArgumentException().isThrownBy(() -> new ClientAuthenticationMethod(null));
 	}
 
 	@Test
@@ -45,4 +47,5 @@ public class ClientAuthenticationMethodTests {
 	public void getValueWhenAuthenticationMethodNoneThenReturnNone() {
 		assertThat(ClientAuthenticationMethod.NONE.getValue()).isEqualTo("none");
 	}
+
 }

@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.security.samples.mvc;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,6 +69,7 @@ public class MessageJsonController {
 			}
 			return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
 		}
+		message.setCreated(Calendar.getInstance());
 		message = messageRepository.save(message);
 		return new ResponseEntity<>(message, HttpStatus.OK);
 	}

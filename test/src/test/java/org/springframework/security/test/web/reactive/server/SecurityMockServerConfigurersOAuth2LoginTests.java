@@ -36,7 +36,6 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.reactive.result.method.annotation.OAuth2AuthorizedClientArgumentResolver;
 import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizedClientRepository;
-import org.springframework.security.oauth2.client.web.server.WebSessionServerOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.server.context.SecurityContextServerWebExchangeWebFilter;
@@ -45,59 +44,47 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockOAuth2Login;
-import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.springSecurity;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SecurityMockServerConfigurersOAuth2LoginTests extends AbstractMockServerConfigurersTests {
+
 	private OAuth2LoginController controller = new OAuth2LoginController();
 
 	@Mock
 	private ReactiveClientRegistrationRepository clientRegistrationRepository;
 
+	@Mock
+	private ServerOAuth2AuthorizedClientRepository authorizedClientRepository;
+
 	private WebTestClient client;
 
 	@Before
 	public void setup() {
-		ServerOAuth2AuthorizedClientRepository authorizedClientRepository =
-				new WebSessionServerOAuth2AuthorizedClientRepository();
-
-		this.client = WebTestClient
-				.bindToController(this.controller)
-				.argumentResolvers(c -> c.addCustomResolver(
-						new OAuth2AuthorizedClientArgumentResolver
-								(this.clientRegistrationRepository, authorizedClientRepository)))
+		this.client = WebTestClient.bindToController(this.controller)
+				.argumentResolvers((c) -> c.addCustomResolver(new OAuth2AuthorizedClientArgumentResolver(
+						this.clientRegistrationRepository, this.authorizedClientRepository)))
 				.webFilter(new SecurityContextServerWebExchangeWebFilter())
-				.apply(springSecurity())
-				.configureClient()
-				.defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-				.build();
+				.apply(SecurityMockServerConfigurers.springSecurity()).configureClient()
+				.defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE).build();
 	}
 
 	@Test
 	public void oauth2LoginWhenUsingDefaultsThenProducesDefaultAuthentication() {
-		this.client.mutateWith(mockOAuth2Login())
-				.get().uri("/token")
-				.exchange()
+		this.client.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login()).get().uri("/token").exchange()
 				.expectStatus().isOk();
-
 		OAuth2AuthenticationToken token = this.controller.token;
 		assertThat(token).isNotNull();
 		assertThat(token.getAuthorizedClientRegistrationId()).isEqualTo("test");
 		assertThat(token.getPrincipal()).isInstanceOf(OAuth2User.class);
-		assertThat(token.getPrincipal().getAttributes())
-				.containsEntry("sub", "user");
+		assertThat(token.getPrincipal().getAttributes()).containsEntry("sub", "user");
 		assertThat((Collection<GrantedAuthority>) token.getPrincipal().getAuthorities())
 				.contains(new SimpleGrantedAuthority("SCOPE_read"));
 	}
 
 	@Test
 	public void oauth2LoginWhenUsingDefaultsThenProducesDefaultAuthorizedClient() {
-		this.client.mutateWith(mockOAuth2Login())
-				.get().uri("/client")
-				.exchange()
+		this.client.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login()).get().uri("/client").exchange()
 				.expectStatus().isOk();
-
 		OAuth2AuthorizedClient client = this.controller.authorizedClient;
 		assertThat(client).isNotNull();
 		assertThat(client.getClientRegistration().getRegistrationId()).isEqualTo("test");
@@ -107,12 +94,10 @@ public class SecurityMockServerConfigurersOAuth2LoginTests extends AbstractMockS
 
 	@Test
 	public void oauth2LoginWhenAuthoritiesSpecifiedThenGrantsAccess() {
-		this.client.mutateWith(mockOAuth2Login()
-				.authorities(new SimpleGrantedAuthority("SCOPE_admin")))
-				.get().uri("/token")
-				.exchange()
-				.expectStatus().isOk();
-
+		this.client
+				.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login()
+						.authorities(new SimpleGrantedAuthority("SCOPE_admin")))
+				.get().uri("/token").exchange().expectStatus().isOk();
 		OAuth2AuthenticationToken token = this.controller.token;
 		assertThat((Collection<GrantedAuthority>) token.getPrincipal().getAuthorities())
 				.contains(new SimpleGrantedAuthority("SCOPE_admin"));
@@ -120,78 +105,48 @@ public class SecurityMockServerConfigurersOAuth2LoginTests extends AbstractMockS
 
 	@Test
 	public void oauth2LoginWhenAttributeSpecifiedThenUserHasAttribute() {
-		this.client.mutateWith(mockOAuth2Login()
-				.attributes(a -> a.put("iss", "https://idp.example.org")))
-				.get().uri("/token")
-				.exchange()
-				.expectStatus().isOk();
-
+		this.client
+				.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login()
+						.attributes((a) -> a.put("iss", "https://idp.example.org")))
+				.get().uri("/token").exchange().expectStatus().isOk();
 		OAuth2AuthenticationToken token = this.controller.token;
-		assertThat(token.getPrincipal().getAttributes())
-				.containsEntry("iss", "https://idp.example.org");
+		assertThat(token.getPrincipal().getAttributes()).containsEntry("iss", "https://idp.example.org");
 	}
 
 	@Test
 	public void oauth2LoginWhenNameSpecifiedThenUserHasName() throws Exception {
-		OAuth2User oauth2User = new DefaultOAuth2User(
-				AuthorityUtils.commaSeparatedStringToAuthorityList("SCOPE_read"),
-				Collections.singletonMap("custom-attribute", "test-subject"),
-				"custom-attribute");
-
-		this.client.mutateWith(mockOAuth2Login()
-				.oauth2User(oauth2User))
-				.get().uri("/token")
-				.exchange()
-				.expectStatus().isOk();
-
+		OAuth2User oauth2User = new DefaultOAuth2User(AuthorityUtils.commaSeparatedStringToAuthorityList("SCOPE_read"),
+				Collections.singletonMap("custom-attribute", "test-subject"), "custom-attribute");
+		this.client.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login().oauth2User(oauth2User)).get()
+				.uri("/token").exchange().expectStatus().isOk();
 		OAuth2AuthenticationToken token = this.controller.token;
-		assertThat(token.getPrincipal().getName())
-				.isEqualTo("test-subject");
-
-		this.client.mutateWith(mockOAuth2Login()
-				.oauth2User(oauth2User))
-				.get().uri("/client")
-				.exchange()
-				.expectStatus().isOk();
-
+		assertThat(token.getPrincipal().getName()).isEqualTo("test-subject");
+		this.client.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login().oauth2User(oauth2User)).get()
+				.uri("/client").exchange().expectStatus().isOk();
 		OAuth2AuthorizedClient client = this.controller.authorizedClient;
-		assertThat(client.getPrincipalName())
-				.isEqualTo("test-subject");
+		assertThat(client.getPrincipalName()).isEqualTo("test-subject");
 	}
 
 	@Test
 	public void oauth2LoginWhenOAuth2UserSpecifiedThenLastCalledTakesPrecedence() throws Exception {
-		OAuth2User oauth2User = new DefaultOAuth2User(
-				AuthorityUtils.createAuthorityList("SCOPE_read"),
-				Collections.singletonMap("sub", "subject"),
-				"sub");
-
-		this.client.mutateWith(mockOAuth2Login()
-				.attributes(a -> a.put("subject", "foo"))
-				.oauth2User(oauth2User))
-				.get().uri("/token")
-				.exchange()
+		OAuth2User oauth2User = new DefaultOAuth2User(AuthorityUtils.createAuthorityList("SCOPE_read"),
+				Collections.singletonMap("sub", "subject"), "sub");
+		this.client.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login()
+				.attributes((a) -> a.put("subject", "foo")).oauth2User(oauth2User)).get().uri("/token").exchange()
 				.expectStatus().isOk();
-
 		OAuth2AuthenticationToken token = this.controller.token;
-		assertThat(token.getPrincipal().getAttributes())
-				.containsEntry("sub", "subject");
-
-		this.client.mutateWith(mockOAuth2Login()
-				.oauth2User(oauth2User)
-				.attributes(a -> a.put("sub", "bar")))
-				.get().uri("/token")
-				.exchange()
-				.expectStatus().isOk();
-
+		assertThat(token.getPrincipal().getAttributes()).containsEntry("sub", "subject");
+		this.client.mutateWith(SecurityMockServerConfigurers.mockOAuth2Login().oauth2User(oauth2User)
+				.attributes((a) -> a.put("sub", "bar"))).get().uri("/token").exchange().expectStatus().isOk();
 		token = this.controller.token;
-		assertThat(token.getPrincipal().getAttributes())
-				.containsEntry("sub", "bar");
+		assertThat(token.getPrincipal().getAttributes()).containsEntry("sub", "bar");
 	}
 
 	@RestController
 	static class OAuth2LoginController {
+
 		volatile OAuth2AuthenticationToken token;
+
 		volatile OAuth2AuthorizedClient authorizedClient;
 
 		@GetMapping("/token")
@@ -201,10 +156,11 @@ public class SecurityMockServerConfigurersOAuth2LoginTests extends AbstractMockS
 		}
 
 		@GetMapping("/client")
-		String authorizedClient
-				(@RegisteredOAuth2AuthorizedClient OAuth2AuthorizedClient authorizedClient) {
+		String authorizedClient(@RegisteredOAuth2AuthorizedClient OAuth2AuthorizedClient authorizedClient) {
 			this.authorizedClient = authorizedClient;
 			return authorizedClient.getPrincipalName();
 		}
+
 	}
+
 }

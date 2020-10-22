@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package sample;
 
 import java.net.URI;
@@ -41,7 +42,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -53,9 +54,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
-import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenResponse;
@@ -86,7 +85,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @since 5.0
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes={ OAuth2LoginApplication.class, OAuth2LoginApplicationTests.SecurityTestConfig.class })
+@SpringBootTest
 @AutoConfigureMockMvc
 public class OAuth2LoginApplicationTests {
 	private static final String AUTHORIZATION_BASE_URI = "/oauth2/authorization";
@@ -309,7 +308,7 @@ public class OAuth2LoginApplicationTests {
 
 	private HtmlAnchor getClientAnchorElement(HtmlPage page, ClientRegistration clientRegistration) {
 		Optional<HtmlAnchor> clientAnchorElement = page.getAnchors().stream()
-				.filter(e -> e.asText().equals(clientRegistration.getClientName())).findFirst();
+				.filter((e) -> e.asText().equals(clientRegistration.getClientName())).findFirst();
 
 		return (clientAnchorElement.orElse(null));
 	}
@@ -329,23 +328,24 @@ public class OAuth2LoginApplicationTests {
 	}
 
 	@EnableWebSecurity
+	@TestConfiguration
 	public static class SecurityTestConfig extends WebSecurityConfigurerAdapter {
 
 		// @formatter:off
 		@Override
 		protected void configure(HttpSecurity http) throws Exception {
 			http
-				.authorizeRequests(authorizeRequests ->
+				.authorizeRequests((authorizeRequests) -> 
 					authorizeRequests
 						.anyRequest().authenticated()
 				)
-				.oauth2Login(oauth2Login ->
+				.oauth2Login((oauth2Login) -> 
 					oauth2Login
-						.tokenEndpoint(tokenEndpoint ->
+						.tokenEndpoint((tokenEndpoint) -> 
 							tokenEndpoint
 								.accessTokenResponseClient(this.mockAccessTokenResponseClient())
 						)
-						.userInfoEndpoint(userInfoEndpoint ->
+						.userInfoEndpoint((userInfoEndpoint) -> 
 							userInfoEndpoint
 								.userService(this.mockUserService())
 						)
@@ -380,11 +380,6 @@ public class OAuth2LoginApplicationTests {
 			OAuth2UserService userService = mock(OAuth2UserService.class);
 			when(userService.loadUser(any())).thenReturn(user);
 			return userService;
-		}
-
-		@Bean
-		OAuth2AuthorizedClientRepository authorizedClientRepository() {
-			return new HttpSessionOAuth2AuthorizedClientRepository();
 		}
 	}
 }
